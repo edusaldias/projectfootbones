@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cuneiform Bones Calculator</title>
+    <title>Sex Estimation Calculator - Cuneiform Bones</title>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -141,17 +141,15 @@
 <body>
 
 <div class="container">
-    <h1>Sex Estimation Calculator - Cuneiform Bones</h1>
+    <h1>Sex Estimation Calculator</h1>
     <h2>Methodology based on Chilean Subactual Osteological Series</h2>
     
-    <!-- Pestañas para seleccionar el hueso -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab(event, 'medial')">Medial</button>
         <button class="tab-btn" onclick="switchTab(event, 'intermediate')">Intermediate</button>
         <button class="tab-btn" onclick="switchTab(event, 'lateral')">Lateral</button>
     </div>
 
-    <!-- SECCIÓN CUNEIFORME MEDIAL -->
     <div id="medial" class="calculator-section active">
         <div class="form-group">
             <label for="mh1">Maximum Height (MH1) in mm:</label>
@@ -160,7 +158,6 @@
         <button class="calc-btn" onclick="calculateMedial()">Estimate Sex</button>
     </div>
 
-    <!-- SECCIÓN CUNEIFORME INTERMEDIO -->
     <div id="intermediate" class="calculator-section">
         <div class="form-group">
             <label for="ml2">Maximum Length (ML2) in mm:</label>
@@ -177,7 +174,6 @@
         <button class="calc-btn" onclick="calculateIntermediate()">Estimate Sex</button>
     </div>
 
-    <!-- SECCIÓN CUNEIFORME LATERAL -->
     <div id="lateral" class="calculator-section">
         <div class="form-group">
             <label for="ml3">Maximum Length (ML3) in mm:</label>
@@ -190,7 +186,6 @@
         <button class="calc-btn" onclick="calculateLateral()">Estimate Sex</button>
     </div>
 
-    <!-- Cuadro de Resultados Único -->
     <div id="result" class="result-box">
         <div id="resultTitle" class="result-title"></div>
         <div id="resultProb" class="result-prob"></div>
@@ -198,7 +193,6 @@
 </div>
 
 <script>
-    // Función para cambiar entre pestañas
     function switchTab(evt, boneName) {
         const sections = document.getElementsByClassName("calculator-section");
         for (let i = 0; i < sections.length; i++) {
@@ -213,9 +207,9 @@
         document.getElementById('result').style.display = "none";
     }
 
-    // Función auxiliar para aplicar la Sigmoidea y mostrar la interfaz
+    // INTERPRETACIÓN CORREGIDA: 0 = Masculino, 1 = Femenino
     function displayResult(logit) {
-        // P = 1 / (1 + e^(-logit))
+        // P calcula la probabilidad de ser FEMENINO (1)
         const probability = 1 / (1 + Math.exp(-logit));
         const resultBox = document.getElementById('result');
         const resultTitle = document.getElementById('resultTitle');
@@ -223,15 +217,16 @@
 
         resultBox.style.display = "block";
 
-        // Punto de corte estándar (Cut-off = 0.5)
+        // Si la probabilidad es >= 0.5, la ecuación clasifica como FEMENINO (1)
         if (probability >= 0.5) {
-            resultBox.className = "result-box male";
-            resultTitle.innerText = "Estimated Sex: MALE";
-            resultProb.innerText = "Probability: " + (probability * 100).toFixed(2) + "%";
-        } else {
             resultBox.className = "result-box female";
             resultTitle.innerText = "Estimated Sex: FEMALE";
-            resultProb.innerText = "Probability: " + ((1 - probability) * 100).toFixed(2) + "%";
+            resultProb.innerText = "Probability of being Female: " + (probability * 100).toFixed(2) + "%";
+        } else {
+            // Si es < 0.5, clasifica como MASCULINO (0). La probabilidad de hombre es el complemento (1 - P)
+            resultBox.className = "result-box male";
+            resultTitle.innerText = "Estimated Sex: MALE";
+            resultProb.innerText = "Probability of being Male: " + ((1 - probability) * 100).toFixed(2) + "%";
         }
     }
 
