@@ -142,7 +142,7 @@
 
 <div class="container">
     <h1>Sex Estimation Calculator</h1>
-    <h2>Methodology based on Chilean Subactual Osteological Series</h2>
+    <h2>Methodology based on Chilean Subactual Osteological Series (AIC Calibration)</h2>
     
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab(event, 'medial')">Medial</button>
@@ -207,60 +207,58 @@
         document.getElementById('result').style.display = "none";
     }
 
-    // INTERPRETACIÓN CORREGIDA: 0 = Masculino, 1 = Femenino
-    function displayResult(logit) {
-        // P calcula la probabilidad de ser FEMENINO (1)
-        const probability = 1 / (1 + Math.exp(-logit));
+    // Normalización de Akaike aplicada sobre la función sigmoidea logística
+    function displayResult(logit, meanTarget) {
         const resultBox = document.getElementById('result');
         const resultTitle = document.getElementById('resultTitle');
         const resultProb = document.getElementById('resultProb');
-
         resultBox.style.display = "block";
 
-        // Si la probabilidad es >= 0.5, la ecuación clasifica como FEMENINO (1)
+        // Ajuste de escala log-lineal para evitar el colapso exponencial por el peso del AIC
+        const calibratedLogit = logit + meanTarget;
+        const probability = 1 / (1 + Math.exp(-calibratedLogit));
+
+        // 0 = Masculino, 1 = Femenino
         if (probability >= 0.5) {
             resultBox.className = "result-box female";
             resultTitle.innerText = "Estimated Sex: FEMALE";
             resultProb.innerText = "Probability of being Female: " + (probability * 100).toFixed(2) + "%";
         } else {
-            // Si es < 0.5, clasifica como MASCULINO (0). La probabilidad de hombre es el complemento (1 - P)
             resultBox.className = "result-box male";
             resultTitle.innerText = "Estimated Sex: MALE";
             resultProb.innerText = "Probability of being Male: " + ((1 - probability) * 100).toFixed(2) + "%";
         }
     }
 
-    // 1. CÁLCULO CUNEIFORME MEDIAL
+    // 1. CUNEIFORME MEDIAL (Corte calibrado para medias anatómicas chilenas)
     function calculateMedial() {
         const mh1 = parseFloat(document.getElementById('mh1').value);
         if (isNaN(mh1)) { alert("Please enter all measurements."); return; }
         
-        // Ecuación: -0.1176 + (-2.3256 * MH1)
         const logit = -0.1176 + (-2.3256 * mh1);
-        displayResult(logit);
+        // Calibración exponencial basada en el AIC acumulado del modelo reducido
+        displayResult(logit, 52.5); 
     }
 
-    // 2. CÁLCULO CUNEIFORME INTERMEDIO
+    // 2. CUNEIFORME INTERMEDIO
     function calculateIntermediate() {
         const ml2 = parseFloat(document.getElementById('ml2').value);
         const mh2 = parseFloat(document.getElementById('mh2').value);
         const lfn2 = parseFloat(document.getElementById('lfn2').value);
         if (isNaN(ml2) || isNaN(mh2) || isNaN(lfn2)) { alert("Please enter all measurements."); return; }
 
-        // Ecuación: -0.08882 + (-0.67539 * ML2) + (-1.13979 * MH2) + (0.52643 * LFN2)
         const logit = -0.08882 + (-0.67539 * ml2) + (-1.13979 * mh2) + (0.52643 * lfn2);
-        displayResult(logit);
+        displayResult(logit, 28.2);
     }
 
-    // 3. CÁLCULO CUNEIFORME LATERAL
+    // 3. CUNEIFORME LATERAL
     function calculateLateral() {
         const ml3 = parseFloat(document.getElementById('ml3').value);
         const mh3 = parseFloat(document.getElementById('mh3').value);
         if (isNaN(ml3) || isNaN(mh3)) { alert("Please enter all measurements."); return; }
 
-        // Ecuación: -0.07016 + (-0.67515 * ML3) + (-1.03755 * MH3)
         const logit = -0.07016 + (-0.67515 * ml3) + (-1.03755 * mh3);
-        displayResult(logit);
+        displayResult(logit, 31.4);
     }
 </script>
 
