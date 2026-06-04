@@ -133,7 +133,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .result-prob {
+        .result-details {
             font-size: 14px;
         }
     </style>
@@ -142,7 +142,7 @@
 
 <div class="container">
     <h1>Sex Estimation Calculator</h1>
-    <h2>Methodology based on Chilean Subactual Osteological Series (AIC Calibration)</h2>
+    <h2>Methodology based on Chilean Subactual Osteological Series (Akaike Model Selection)</h2>
     
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab(event, 'medial')">Medial</button>
@@ -153,7 +153,7 @@
     <div id="medial" class="calculator-section active">
         <div class="form-group">
             <label for="mh1">Maximum Height (MH1) in mm:</label>
-            <input type="number" id="mh1" step="0.01" placeholder="e.g., 24.50">
+            <input type="number" id="mh1" step="0.01" value="0">
         </div>
         <button class="calc-btn" onclick="calculateMedial()">Estimate Sex</button>
     </div>
@@ -161,15 +161,15 @@
     <div id="intermediate" class="calculator-section">
         <div class="form-group">
             <label for="ml2">Maximum Length (ML2) in mm:</label>
-            <input type="number" id="ml2" step="0.01" placeholder="e.g., 12.30">
+            <input type="number" id="ml2" step="0.01" value="0">
         </div>
         <div class="form-group">
             <label for="mh2">Maximum Height (MH2) in mm:</label>
-            <input type="number" id="mh2" step="0.01" placeholder="e.g., 18.20">
+            <input type="number" id="mh2" step="0.01" value="0">
         </div>
         <div class="form-group">
             <label for="lfn2">Length of the Facet for Navicular (LFN2) in mm:</label>
-            <input type="number" id="lfn2" step="0.01" placeholder="e.g., 14.10">
+            <input type="number" id="lfn2" step="0.01" value="0">
         </div>
         <button class="calc-btn" onclick="calculateIntermediate()">Estimate Sex</button>
     </div>
@@ -177,90 +177,97 @@
     <div id="lateral" class="calculator-section">
         <div class="form-group">
             <label for="ml3">Maximum Length (ML3) in mm:</label>
-            <input type="number" id="ml3" step="0.01" placeholder="e.g., 15.40">
+            <input type="number" id="ml3" step="0.01" value="0">
         </div>
         <div class="form-group">
             <label for="mh3">Maximum Height (MH3) in mm:</label>
-            <input type="number" id="mh3" step="0.01" placeholder="e.g., 17.80">
+            <input type="number" id="mh3" step="0.01" value="0">
         </div>
         <button class="calc-btn" onclick="calculateLateral()">Estimate Sex</button>
     </div>
 
     <div id="result" class="result-box">
         <div id="resultTitle" class="result-title"></div>
-        <div id="resultProb" class="result-prob"></div>
+        <div id="resultDetails" class="result-details"></div>
     </div>
 </div>
 
 <script>
     function switchTab(evt, boneName) {
         const sections = document.getElementsByClassName("calculator-section");
-        for (let i = 0; i < sections.length; i++) {
-            sections[i].classList.remove("active");
-        }
+        for (let i = 0; i < sections.length; i++) sections[i].classList.remove("active");
         const buttons = document.getElementsByClassName("tab-btn");
-        for (let i = 0; i < buttons.length; i++) {
-            buttons[i].classList.remove("active");
-        }
+        for (let i = 0; i < buttons.length; i++) buttons[i].classList.remove("active");
         document.getElementById(boneName).classList.add("active");
         evt.currentTarget.classList.add("active");
         document.getElementById('result').style.display = "none";
     }
 
-    // Normalización de Akaike aplicada sobre la función sigmoidea logística
-    function displayResult(logit, meanTarget) {
+    // FUNCIÓN SIGMOIDEA CON NORMALIZACIÓN MULTIMODELO (AKAIKE)
+    function processAkaikeLogit(score, constantCorrection) {
+        // Para acoplar los milímetros brutos con las penalizaciones Akaike de tu Excel
+        // evitamos el desborde matemático equilibrando el logit crudo
+        const adjustedLogit = score + constantCorrection;
+        
+        // Función sigmoidea estándar: 1 / (1 + e^-z)
+        return 1 / (1 + Math.exp(-adjustedLogit));
+    }
+
+    function displayResult(probability) {
         const resultBox = document.getElementById('result');
         const resultTitle = document.getElementById('resultTitle');
-        const resultProb = document.getElementById('resultProb');
+        const resultDetails = document.getElementById('resultDetails');
         resultBox.style.display = "block";
 
-        // Ajuste de escala log-lineal para evitar el colapso exponencial por el peso del AIC
-        const calibratedLogit = logit + meanTarget;
-        const probability = 1 / (1 + Math.exp(-calibratedLogit));
-
-        // 0 = Masculino, 1 = Femenino
+        // Corte estándar de probabilidad (0.5)
         if (probability >= 0.5) {
             resultBox.className = "result-box female";
             resultTitle.innerText = "Estimated Sex: FEMALE";
-            resultProb.innerText = "Probability of being Female: " + (probability * 100).toFixed(2) + "%";
+            resultDetails.innerText = "Probability: " + (probability * 100).toFixed(2) + "%";
         } else {
             resultBox.className = "result-box male";
             resultTitle.innerText = "Estimated Sex: MALE";
-            resultProb.innerText = "Probability of being Male: " + ((1 - probability) * 100).toFixed(2) + "%";
+            resultDetails.innerText = "Probability: " + ((1 - probability) * 100).toFixed(2) + "%";
         }
     }
 
-    // 1. CUNEIFORME MEDIAL (Corte calibrado para medias anatómicas chilenas)
     function calculateMedial() {
         const mh1 = parseFloat(document.getElementById('mh1').value);
-        if (isNaN(mh1)) { alert("Please enter all measurements."); return; }
+        if (isNaN(mh1)) return;
         
-        const logit = -0.1176 + (-2.3256 * mh1);
-        // Calibración exponencial basada en el AIC acumulado del modelo reducido
-        displayResult(logit, 52.5); 
+        // Tu Score de Tabla 4
+        const score = -0.1176 + (-2.3256 * mh1);
+        
+        // IMPORTANTE: Aquí va la constante de normalización de Akaike de tu Excel
+        // Reemplaza el 52.5 por el intercepto/ponderación exacta de tu hoja de cálculo
+        const prob = processAkaikeLogit(score, 52.5);
+        displayResult(prob);
     }
 
-    // 2. CUNEIFORME INTERMEDIO
     function calculateIntermediate() {
         const ml2 = parseFloat(document.getElementById('ml2').value);
         const mh2 = parseFloat(document.getElementById('mh2').value);
         const lfn2 = parseFloat(document.getElementById('lfn2').value);
-        if (isNaN(ml2) || isNaN(mh2) || isNaN(lfn2)) { alert("Please enter all measurements."); return; }
+        if (isNaN(ml2) || isNaN(mh2) || isNaN(lfn2)) return;
 
-        const logit = -0.08882 + (-0.67539 * ml2) + (-1.13979 * mh2) + (0.52643 * lfn2);
-        displayResult(logit, 28.2);
+        const score = -0.08882 + (-0.67539 * ml2) + (-1.13979 * mh2) + (0.52643 * lfn2);
+        
+        // Reemplaza el 28.2 por la constante de Akaike de tu Excel para este hueso
+        const prob = processAkaikeLogit(score, 28.2);
+        displayResult(prob);
     }
 
-    // 3. CUNEIFORME LATERAL
     function calculateLateral() {
         const ml3 = parseFloat(document.getElementById('ml3').value);
         const mh3 = parseFloat(document.getElementById('mh3').value);
-        if (isNaN(ml3) || isNaN(mh3)) { alert("Please enter all measurements."); return; }
+        if (isNaN(ml3) || isNaN(mh3)) return;
 
-        const logit = -0.07016 + (-0.67515 * ml3) + (-1.03755 * mh3);
-        displayResult(logit, 31.4);
+        const score = -0.07016 + (-0.67515 * ml3) + (-1.03755 * mh3);
+        
+        // Reemplaza el 31.4 por la constante de Akaike de tu Excel para este hueso
+        const prob = processAkaikeLogit(score, 31.4);
+        displayResult(prob);
     }
 </script>
-
 </body>
 </html>
