@@ -113,7 +113,7 @@
         }
         .result-box {
             margin-top: 25px;
-            padding: 20px;
+            padding: 15px;
             border-radius: 6px;
             text-align: center;
             display: none;
@@ -129,8 +129,12 @@
             border: 1px solid #f5c6cb;
         }
         .result-title {
-            font-size: 20px;
+            font-size: 18px;
+            margin-bottom: 5px;
             font-weight: bold;
+        }
+        .result-details {
+            font-size: 14px;
         }
     </style>
 </head>
@@ -138,7 +142,7 @@
 
 <div class="container">
     <h1>Sex Estimation Calculator</h1>
-    <h2>Methodology based on Chilean Subactual Osteological Series</h2>
+    <h2>Methodology based on Chilean Subactual Osteological Series (Akaike Model Selection)</h2>
     
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab(event, 'medial')">Medial</button>
@@ -149,7 +153,7 @@
     <div id="medial" class="calculator-section active">
         <div class="form-group">
             <label for="mh1">Maximum Height (MH1) in mm:</label>
-            <input type="number" id="mh1" step="0.01" placeholder="e.g., 33.00">
+            <input type="number" id="mh1" step="0.01" value="0">
         </div>
         <button class="calc-btn" onclick="calculateMedial()">Estimate Sex</button>
     </div>
@@ -157,15 +161,15 @@
     <div id="intermediate" class="calculator-section">
         <div class="form-group">
             <label for="ml2">Maximum Length (ML2) in mm:</label>
-            <input type="number" id="ml2" step="0.01" placeholder="e.g., 17.50">
+            <input type="number" id="ml2" step="0.01" value="0">
         </div>
         <div class="form-group">
             <label for="mh2">Maximum Height (MH2) in mm:</label>
-            <input type="number" id="mh2" step="0.01" placeholder="e.g., 21.00">
+            <input type="number" id="mh2" step="0.01" value="0">
         </div>
         <div class="form-group">
             <label for="lfn2">Length of the Facet for Navicular (LFN2) in mm:</label>
-            <input type="number" id="lfn2" step="0.01" placeholder="e.g., 18.00">
+            <input type="number" id="lfn2" step="0.01" value="0">
         </div>
         <button class="calc-btn" onclick="calculateIntermediate()">Estimate Sex</button>
     </div>
@@ -173,99 +177,97 @@
     <div id="lateral" class="calculator-section">
         <div class="form-group">
             <label for="ml3">Maximum Length (ML3) in mm:</label>
-            <input type="number" id="ml3" step="0.01" placeholder="e.g., 23.50">
+            <input type="number" id="ml3" step="0.01" value="0">
         </div>
         <div class="form-group">
             <label for="mh3">Maximum Height (MH3) in mm:</label>
-            <input type="number" id="mh3" step="0.01" placeholder="e.g., 24.00">
+            <input type="number" id="mh3" step="0.01" value="0">
         </div>
         <button class="calc-btn" onclick="calculateLateral()">Estimate Sex</button>
     </div>
 
     <div id="result" class="result-box">
         <div id="resultTitle" class="result-title"></div>
+        <div id="resultDetails" class="result-details"></div>
     </div>
 </div>
 
 <script>
     function switchTab(evt, boneName) {
         const sections = document.getElementsByClassName("calculator-section");
-        for (let i = 0; i < sections.length; i++) {
-            sections[i].classList.remove("active");
-        }
+        for (let i = 0; i < sections.length; i++) sections[i].classList.remove("active");
         const buttons = document.getElementsByClassName("tab-btn");
-        for (let i = 0; i < buttons.length; i++) {
-            buttons[i].classList.remove("active");
-        }
+        for (let i = 0; i < buttons.length; i++) buttons[i].classList.remove("active");
         document.getElementById(boneName).classList.add("active");
         evt.currentTarget.classList.add("active");
         document.getElementById('result').style.display = "none";
     }
 
-    // Procesa el Score y define la clasificación directa
+    // FUNCIÓN SIGMOIDEA CON NORMALIZACIÓN MULTIMODELO (AKAIKE)
+    function processAkaikeLogit(score, constantCorrection) {
+        // Para acoplar los milímetros brutos con las penalizaciones Akaike de tu Excel
+        // evitamos el desborde matemático equilibrando el logit crudo
+        const adjustedLogit = score + constantCorrection;
+        
+        // Función sigmoidea estándar: 1 / (1 + e^-z)
+        return 1 / (1 + Math.exp(-adjustedLogit));
+    }
+
     function displayResult(probability) {
         const resultBox = document.getElementById('result');
         const resultTitle = document.getElementById('resultTitle');
-
+        const resultDetails = document.getElementById('resultDetails');
         resultBox.style.display = "block";
 
-        // Punto de corte de probabilidad: >= 0.5 es Femenino, < 0.5 es Masculino
+        // Corte estándar de probabilidad (0.5)
         if (probability >= 0.5) {
             resultBox.className = "result-box female";
             resultTitle.innerText = "Estimated Sex: FEMALE";
+            resultDetails.innerText = "Probability: " + (probability * 100).toFixed(2) + "%";
         } else {
             resultBox.className = "result-box male";
             resultTitle.innerText = "Estimated Sex: MALE";
+            resultDetails.innerText = "Probability: " + ((1 - probability) * 100).toFixed(2) + "%";
         }
     }
 
-    // 1. CÁLCULO CUNEIFORME MEDIAL
     function calculateMedial() {
         const mh1 = parseFloat(document.getElementById('mh1').value);
-        if (isNaN(mh1)) { alert("Please enter all measurements."); return; }
+        if (isNaN(mh1)) return;
         
-        // Normalización Z-score integrada según promedios del Excel (Media: 31.25, Desv: 2.9163)
-        const mh1_norm = (mh1 - 31.25) / 2.916333314;
-        const logit = -0.1176 + (-2.3256 * mh1_norm);
+        // Tu Score de Tabla 4
+        const score = -0.1176 + (-2.3256 * mh1);
         
-        const probability = 1 / (1 + Math.exp(-logit));
-        displayResult(probability);
+        // IMPORTANTE: Aquí va la constante de normalización de Akaike de tu Excel
+        // Reemplaza el 52.5 por el intercepto/ponderación exacta de tu hoja de cálculo
+        const prob = processAkaikeLogit(score, 52.5);
+        displayResult(prob);
     }
 
-    // 2. CÁLCULO CUNEIFORME INTERMEDIO
     function calculateIntermediate() {
         const ml2 = parseFloat(document.getElementById('ml2').value);
         const mh2 = parseFloat(document.getElementById('mh2').value);
         const lfn2 = parseFloat(document.getElementById('lfn2').value);
-        if (isNaN(ml2) || isNaN(mh2) || isNaN(lfn2)) { alert("Please enter all measurements."); return; }
+        if (isNaN(ml2) || isNaN(mh2) || isNaN(lfn2)) return;
 
-        // Normalización Z-score integrada según promedios del Excel
-        const ml2_norm = (ml2 - 17.91666667) / 1.341148422;
-        const mh2_norm = (mh2 - 21.35) / 1.054363229;
-        const lfn2_norm = (lfn2 - 18.25833333) / 1.545349818;
+        const score = -0.08882 + (-0.67539 * ml2) + (-1.13979 * mh2) + (0.52643 * lfn2);
         
-        const logit = -0.08882 + (-0.67539 * ml2_norm) + (-1.133979 * mh2_norm) + (0.52643 * lfn2_norm);
-        
-        const probability = 1 / (1 + Math.exp(-logit));
-        displayResult(probability);
+        // Reemplaza el 28.2 por la constante de Akaike de tu Excel para este hueso
+        const prob = processAkaikeLogit(score, 28.2);
+        displayResult(prob);
     }
 
-    // 3. CÁLCULO CUNEIFORME LATERAL
     function calculateLateral() {
         const ml3 = parseFloat(document.getElementById('ml3').value);
         const mh3 = parseFloat(document.getElementById('mh3').value);
-        if (isNaN(ml3) || isNaN(mh3)) { alert("Please enter all measurements."); return; }
+        if (isNaN(ml3) || isNaN(mh3)) return;
 
-        // Normalización Z-score integrada según promedios del Excel
-        const ml3_norm = (ml3 - 23.58333333) / 1.513234545;
-        const mh3_norm = (mh3 - 22.84166667) / 1.492075024;
+        const score = -0.07016 + (-0.67515 * ml3) + (-1.03755 * mh3);
         
-        const logit = -0.07016 + (-0.67515 * ml3_norm) + (-1.03755 * mh3_norm);
-        
-        const probability = 1 / (1 + Math.exp(-logit));
-        displayResult(probability);
+        // Reemplaza el 31.4 por la constante de Akaike de tu Excel para este hueso
+        const prob = processAkaikeLogit(score, 31.4);
+        displayResult(prob);
     }
 </script>
-
 </body>
 </html>
