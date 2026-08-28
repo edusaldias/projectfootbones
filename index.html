@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sex Estimation Calculator - Cuneiform Bones</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #18bc9c;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --accent-color: #5F9EA0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+        }
+        .header-panel {
+            background-color: var(--accent-color);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        h1 { margin: 0; font-size: 24px; }
+        .author { margin: 5px 0 0 0; font-size: 12px; opacity: 0.9; }
+        
+        h2 {
+            color: #7f8c8d;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+        .main-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .main-tab-btn {
+            flex: 1;
+            background-color: #e2e8f0;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 6px;
+            color: #4a5568;
+            transition: all 0.3s;
+        }
+        .main-tab-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .mode-section { display: none; }
+        .mode-section.active { display: block; }
+
+        .tabs {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #dce4ec;
+        }
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #7f8c8d;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .tab-btn.active {
+            color: var(--secondary-color);
+            border-bottom: 3px solid var(--secondary-color);
+        }
+        .calculator-section { display: none; }
+        .calculator-section.active { display: block; }
+        
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        input[type="number"], select, input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dce4ec;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input:focus, select:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+        }
+        button.calc-btn {
+            width: 100%;
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+        button.calc-btn:hover { background-color: #128f76; }
+        
+        .result-box {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            display: none;
+        }
+        .male { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .female { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .result-title { font-size: 20px; font-weight: bold; }
+        .result-details { font-size: 14px; margin-top: 5px; }
+
+        .info-text {
+            font-size: 14px;
+            color: #4a5568;
+            background: #edf2f7;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-panel">
+        <h1>Sex Estimation Calculator</h1>
+        <p class="author">By: Esteban Arroyo and Eduardo Saldías</p>
+    </div>
+    
+    <h2>
+        Methodology based on Chilean Subactual Osteological Series. 
+        Paper: "<b>Sexual dimorphism in the cuneiform bones from a Chilean subactual osteological series</b>" 
+        (Alvarez, I. Arroyo, E. Retamal, R. Saldías, E.).
+    </h2>
+
+    <div class="main-tabs">
+        <button id="btn-mode-single" class="main-tab-btn active" onclick="switchMode('single')">👤 Single Individual</button>
+        <button id="btn-mode-batch" class="main-tab-btn" onclick="switchMode('batch')">📂 Batch Processing (Excel)</button>
+    </div>
+
+    <div id="mode-single" class="mode-section active">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchBoneTab(event, 'ind-all')">All Bones</button>
+            <button class="tab-btn" onclick="switchBoneTab(event, 'ind-medial')">Medial</button>
+            <button class="tab-btn" onclick="switchBoneTab(event, 'ind-intermediate')">Intermediate</button>
+            <button class="tab-btn" onclick="switchBoneTab(event, 'ind-lateral')">Lateral</button>
+        </div>
+
+        <div id="ind-all" class="calculator-section active">
+            <div class="form-group"><label>Maximum width 1 (MW1) in mm:</label><input type="number" id="all-MW1" step="0.01" value="0"></div>
+            <div class="form-group"><label>Maximum width 2 (MW2) in mm:</label><input type="number" id="all-MW2" step="0.01" value="0"></div>
+            <div class="form-group"><label>Length of facet for second metatarsal 2 (LFM2) in mm:</label><input type="number" id="all-LFM2" step="0.01" value="0"></div>
+            <button class="calc-btn" onclick="calculateSingle('all')">Estimate Sex</button>
+        </div>
+
+        <div id="ind-medial" class="calculator-section">
+            <div class="form-group"><label>Maximum width 1 (MW1) in mm:</label><input type="number" id="med-MW1" step="0.01" value="0"></div>
+            <div class="form-group"><label>Width of facet for first metatarsal 1 (WFM1) in mm:</label><input type="number" id="med-WFM1" step="0.01" value="0"></div>
+            <button class="calc-btn" onclick="calculateSingle('medial')">Estimate Sex</button>
+        </div>
+
+        <div id="ind-intermediate" class="calculator-section">
+            <div class="form-group"><label>Length of facet for second metatarsal 2 (LFM2) in mm:</label><input type="number" id="int-LFM2" step="0.01" value="0"></div>
+            <div class="form-group"><label>Length of facet for navicular 2 (LFN2) in mm:</label><input type="number" id="int-LFN2" step="0.01" value="0"></div>
+            <button class="calc-btn" onclick="calculateSingle('intermediate')">Estimate Sex</button>
+        </div>
+
+        <div id="ind-lateral" class="calculator-section">
+            <div class="form-group"><label>Maximum length 3 (ML3) in mm:</label><input type="number" id="lat-ML3" step="0.01" value="0"></div>
+            <div class="form-group"><label>Maximum width 3 (MW3) in mm:</label><input type="number" id="lat-MW3" step="0.01" value="0"></div>
+            <button class="calc-btn" onclick="calculateSingle('lateral')">Estimate Sex</button>
+        </div>
+
+        <div id="result" class="result-box">
+            <div id="resultTitle" class="result-title"></div>
+            <div id="resultDetails" class="result-details"></div>
+        </div>
+    </div>
+
+    <div id="mode-batch" class="mode-section">
+        <div class="info-text">
+            <strong>Requirements:</strong> The Excel file must contain the specific headings needed for the selected model (e.g., MW1, MW2, LFM2, WFM1, LFN2, ML3, MW3) without missing or 'NA' rows.
+        </div>
+        
+        <div class="form-group">
+            <label>1. Select Model Equation:</label>
+            <select id="batch-model">
+                <option value="all">All of the cuneiform bones [MW1, MW2, LFM2]</option>
+                <option value="medial">Medial Cuneiform [MW1, WFM1]</option>
+                <option value="intermediate">Intermediate Cuneiform [LFM2, LFN2]</option>
+                <option value="lateral">Lateral Cuneiform [ML3, MW3]</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>2. Upload Excel File (.xlsx, .xls):</label>
+            <input type="file" id="excel-file" accept=".xlsx, .xls">
+        </div>
+
+        <button class="calc-btn" style="background-color: var(--primary-color);" onclick="processExcel()">
+            🛠️ Process File & Download Results
+        </button>
+    </div>
+</div>
+
+<script>
+    // --- CONSTANTES DE NORMALIZACIÓN ---
+    const MEDIAS = { 
+        ML1: 25.54850746, MH1: 18.15671642, MW1: 31.04850746, 
+        ML2: 17.86567164, MH2: 15.87313433, MW2: 21.13805970, 
+        ML3: 23.40298507, MH3: 16.03731343, MW3: 23.72388060, 
+        LFN1: 21.03358209, WFM1: 14.48134328, LFM2: 19.97910448, 
+        WFM2: 12.69850746, LFN2: 17.86119403, WFN2: 15.65447761, 
+        LM3: 20.48731343, WM3: 13.25522388 
+    };
+
+    const SD = { 
+        ML1: 2.010189647, MH1: 1.824455744, MW1: 2.572899101, 
+        ML2: 1.498325104, MH2: 1.256092771, MW2: 2.044055926, 
+        ML3: 2.230578343, MH3: 1.417700756, MW3: 2.047891970, 
+        LFN1: 2.600489949, WFM1: 1.524001851, LFM2: 1.856023505, 
+        WFM2: 1.466517796, LFN2: 1.899185043, WFN2: 1.419234977, 
+        LM3: 2.264250499, WM3: 1.355055539 
+    };
+
+    // --- MANEJO DE VISTAS (TABS) ---
+    function switchMode(mode) {
+        document.getElementById('btn-mode-single').classList.toggle('active', mode === 'single');
+        document.getElementById('btn-mode-batch').classList.toggle('active', mode === 'batch');
+        document.getElementById('mode-single').classList.toggle('active', mode === 'single');
+        document.getElementById('mode-batch').classList.toggle('active', mode === 'batch');
+    }
+
+    function switchBoneTab(evt, boneName) {
+        const sections = document.querySelectorAll("#mode-single .calculator-section");
+        sections.forEach(s => s.classList.remove("active"));
+        const buttons = document.querySelectorAll("#mode-single .tab-btn");
+        buttons.forEach(b => b.classList.remove("active"));
+        
+        document.getElementById(boneName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+        document.getElementById('result').style.display = "none";
+    }
+
+    // --- FUNCIÓN MATEMÁTICA CENTRAL ---
+    function sigmoid(y) { return 1 / (1 + Math.exp(-y)); }
+
+    function runModel(modelName, data) {
+        let y = 0;
+        
+        // Estandarización z-score
+        const norm = (val, key) => (val - MEDIAS[key]) / SD[key];
+
+        if (modelName === 'all') {
+            y = 0.03466 + (-2.50225 * norm(data.MW1, 'MW1')) + (1.19407 * norm(data.MW2, 'MW2')) + (-1.38441 * norm(data.LFM2, 'LFM2'));
+        } 
+        else if (modelName === 'medial') {
+            y = -0.1123 + (-2.2106 * norm(data.MW1, 'MW1')) + (-0.5556 * norm(data.WFM1, 'WFM1'));
+        } 
+        else if (modelName === 'intermediate') {
+            y = 0.04425 + (-0.77180 * norm(data.LFM2, 'LFM2')) + (-1.20513 * norm(data.LFN2, 'LFN2'));
+        } 
+        else if (modelName === 'lateral') {
+            y = -0.1587 + (-1.1923 * norm(data.ML3, 'ML3')) + (-0.7819 * norm(data.MW3, 'MW3'));
+        }
+
+        const p = sigmoid(y);
+        const sex = p >= 0.5 ? "Female" : "Male";
+        return { y, p, sex };
+    }
+
+    // --- CÁLCULO INDIVIDUAL ---
+    function calculateSingle(modelName) {
+        let data = {};
+        if (modelName === 'all') {
+            data.MW1 = parseFloat(document.getElementById('all-MW1').value);
+            data.MW2 = parseFloat(document.getElementById('all-MW2').value);
+            data.LFM2 = parseFloat(document.getElementById('all-LFM2').value);
+        } else if (modelName === 'medial') {
+            data.MW1 = parseFloat(document.getElementById('med-MW1').value);
+            data.WFM1 = parseFloat(document.getElementById('med-WFM1').value);
+        } else if (modelName === 'intermediate') {
+            data.LFM2 = parseFloat(document.getElementById('int-LFM2').value);
+            data.LFN2 = parseFloat(document.getElementById('int-LFN2').value);
+        } else if (modelName === 'lateral') {
+            data.ML3 = parseFloat(document.getElementById('lat-ML3').value);
+            data.MW3 = parseFloat(document.getElementById('lat-MW3').value);
+        }
+
+        // Validación simple
+        if (Object.values(data).some(isNaN)) {
+            alert("Please enter valid numeric values.");
+            return;
+        }
+
+        const res = runModel(modelName, data);
+        
+        const resultBox = document.getElementById('result');
+        resultBox.style.display = "block";
+        resultBox.className = "result-box " + res.sex.toLowerCase();
+        
+        document.getElementById('resultTitle').innerText = `Estimated Sex: ${res.sex.toUpperCase()}`;
+        document.getElementById('resultDetails').innerText = `Probability: ${res.p.toFixed(5)} | Y-Score: ${res.y.toFixed(5)}`;
+    }
+
+    // --- PROCESAMIENTO POR LOTE (EXCEL) ---
+    function processExcel() {
+        const fileInput = document.getElementById('excel-file');
+        const selectedModel = document.getElementById('batch-model').value;
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert("Please select an Excel file first.");
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                    alert("Error: The Excel file does not contain any worksheets.");
+                    return;
+                }
+
+                // Primera hoja del libro
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Convertir a JSON
+                const jsonRows = XLSX.utils.sheet_to_json(worksheet);
+
+                if (!jsonRows || jsonRows.length === 0) {
+                    alert("The selected worksheet seems to be empty.");
+                    return;
+                }
+
+                // Requerimientos de campos por modelo
+                const requirements = {
+                    all: ['MW1', 'MW2', 'LFM2'],
+                    medial: ['MW1', 'WFM1'],
+                    intermediate: ['LFM2', 'LFN2'],
+                    lateral: ['ML3', 'MW3']
+                };
+
+                const reqCols = requirements[selectedModel];
+                
+                // Mapeo limpio de primera fila
+                const sampleRow = jsonRows[0];
+                const cleanSampleRow = {};
+                Object.keys(sampleRow).forEach(k => {
+                    cleanSampleRow[k.trim()] = sampleRow[k];
+                });
+
+                // Validación de columnas necesarias
+                const missingCols = reqCols.filter(col => !(col in cleanSampleRow));
+
+                if (missingCols.length > 0) {
+                    alert(`❌ Missing columns required for this model: ${missingCols.join(', ')}\n\nPlease check that your Excel file contains exactly these column headers.`);
+                    return;
+                }
+
+                // Iteración por fila
+                const processedData = jsonRows.map((row) => {
+                    const cleanRow = {};
+                    Object.keys(row).forEach(k => {
+                        cleanRow[k.trim()] = row[k];
+                    });
+
+                    const modelInputs = {};
+                    reqCols.forEach(col => {
+                        modelInputs[col] = parseFloat(cleanRow[col]);
+                    });
+
+                    if (Object.values(modelInputs).some(isNaN)) {
+                        cleanRow['Y_score'] = "NA";
+                        cleanRow['Probability'] = "NA";
+                        cleanRow['Estimated_Sex'] = "NA";
+                    } else {
+                        const res = runModel(selectedModel, modelInputs);
+                        cleanRow['Y_score'] = res.y;
+                        cleanRow['Probability'] = res.p;
+                        cleanRow['Estimated_Sex'] = res.sex;
+                    }
+                    return cleanRow;
+                });
+
+                // Generar nuevo archivo Excel
+                const newWorksheet = XLSX.utils.json_to_sheet(processedData);
+                const newWorkbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, "Estimations");
+
+                // Descarga automática
+                XLSX.writeFile(newWorkbook, `estimacion_${selectedModel}_cuneiformes.xlsx`);
+                
+            } catch (error) {
+                console.error(error);
+                alert("An error occurred while processing the Excel file: " + error.message);
+            }
+        };
+
+        reader.onerror = function(ex) {
+            alert("File could not be read! Code: " + ex.target.error.code);
+        };
+
+        reader.readAsArrayBuffer(file);
+    }
+</script>
+</body>
+</html>
